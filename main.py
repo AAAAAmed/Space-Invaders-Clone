@@ -29,7 +29,7 @@ ALIEN_HORIZONTAL_STEP=5
 ALIEN_VERTICAL_STEP=20
 ALIEN_MOVE_DELAY=0.65
 
-level=9
+level=1
 
 alienDirection=1 # positive=move right  negative=move left
 alienMoveTimer=0.0
