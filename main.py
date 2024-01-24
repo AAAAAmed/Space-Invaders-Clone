@@ -8,6 +8,8 @@ DRAW_FPS=True
 init_window(WIDTH, HEIGHT, 'Space Invaders')
 # set_target_fps(TARGET_FPS) # Uncomment to limit FPS to TARGET_FPS
 
+gameState='menu'
+
 ICON = load_image("Sprites/Icon.png")
 set_window_icon(ICON)
 
@@ -104,6 +106,7 @@ class Player():
         self.h=16
         self.speed=PLAYER_SPEED
         self.lives=3
+        self.respawnTimer=1.0
 
     def move(self):
         if is_key_down(KeyboardKey.KEY_LEFT):
@@ -129,7 +132,10 @@ class Player():
         for bullet in bullets:
             if AABB(self.x, self.y, self.w, self.h, bullet.x, bullet.y, bullet.w, bullet.h) and not bullet.shooter=='player':
                 bullets.remove(bullet)
-                self.lives-=1      
+                self.lives-=1
+                self.respawnTimer=0.0
+        if self.respawnTimer<1:
+            self.x=-2000
 player=Player()
 
 def spawnEnemies():
@@ -178,47 +184,66 @@ def render():
     begin_drawing()
     clear_background(BLACK)
 
-    for bullet in bullets:
-        draw_rectangle(round(bullet.x), round(bullet.y), bullet.w, bullet.h, WHITE)
-    
-    draw_texture(PLAYER_IMAGE, round(player.x), round(player.y), WHITE)
-    
-    for i in range(len(enemies)):
-        for j in range(len(enemies[i])):
-            match(enemies[i][j].size):
-                case 0:
-                    draw_texture(eval(f'SMALL_ALIEN_IMAGE_{alienAnimation}'), round(enemies[i][j].x), round(enemies[i][j].y), WHITE)
-                case 1:
-                    draw_texture(eval(f'MEDIUM_ALIEN_IMAGE_{alienAnimation}'), round(enemies[i][j].x), round(enemies[i][j].y), WHITE)
-                case 2:
-                    draw_texture(eval(f'LARGE_ALIEN_IMAGE_{alienAnimation}'), round(enemies[i][j].x), round(enemies[i][j].y), WHITE)
+    match gameState:
+        case 'game':
+            for bullet in bullets:
+                draw_rectangle(round(bullet.x), round(bullet.y), bullet.w, bullet.h, WHITE)
+            
+            draw_texture(PLAYER_IMAGE, round(player.x), round(player.y), WHITE)
+            
+            for i in range(len(enemies)):
+                for j in range(len(enemies[i])):
+                    match(enemies[i][j].size):
+                        case 0:
+                            draw_texture(eval(f'SMALL_ALIEN_IMAGE_{alienAnimation}'), round(enemies[i][j].x), round(enemies[i][j].y), WHITE)
+                        case 1:
+                            draw_texture(eval(f'MEDIUM_ALIEN_IMAGE_{alienAnimation}'), round(enemies[i][j].x), round(enemies[i][j].y), WHITE)
+                        case 2:
+                            draw_texture(eval(f'LARGE_ALIEN_IMAGE_{alienAnimation}'), round(enemies[i][j].x), round(enemies[i][j].y), WHITE)
 
-    for i in range(player.lives - 1):
-        draw_texture(PLAYER_IMAGE, 6 + i*32, HEIGHT-24, (255, 255, 255, 125))
+            for i in range(player.lives - 1):
+                draw_texture(PLAYER_IMAGE, 6 + i*32, HEIGHT-24, (255, 255, 255, 125))
+
+        case 'menu':
+            draw_text('Space Invaders', int(WIDTH / 2 - measure_text('Space Invaders', 40) / 2), 40, 40, WHITE)
+            draw_text('PRESS UP-ARROW TO BEGIN', int(WIDTH / 2 - measure_text('PRESS UP-ARROW TO BEGIN', 20) / 2), 100, 20, (75, 75, 75, 255))
 
     draw_text(f'FPS {get_fps()}' if DRAW_FPS else '', 2, 1, 10, WHITE)
     end_drawing()
 
 def main():
     global alienMoveTimer
+    global gameState
     while not window_should_close():
-        if countEnemies() == 0:
-            levelUp()
+        match gameState:
+            case 'game':
+                if countEnemies() == 0:
+                    levelUp()
 
-        player.move()
-        player.shoot()
-        player.hurt()
+                player.move()
+                player.shoot()
+                player.hurt()
+                player.respawnTimer+=get_frame_time()
 
-        moveEnemies()
-        for row in enemies:
-            for enemy in row:
-                enemy.shoot()
-                enemy.hurt()
-        alienMoveTimer+=get_frame_time()
+                moveEnemies()
+                for row in enemies:
+                    for enemy in row:
+                        enemy.shoot()
+                        enemy.hurt()
+                alienMoveTimer+=get_frame_time()
 
-        for bullet in bullets:
-            bullet.move()
-            bullet.die()
+                for bullet in bullets:
+                    bullet.move()
+                    bullet.die()
+
+                if player.lives<=0:
+                    gameState='menu'
+                
+            case 'menu':
+                if is_key_down(KeyboardKey.KEY_UP):
+                    gameState='game'
+                    spawnEnemies()
+                    player.lives=3
 
         render()
 
